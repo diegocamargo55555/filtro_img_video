@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media Loader com Python</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='index.css') }}">
+</head>
+
+<body>
+    <div class="container">
+        <div class="botoes">
+            <button id="btnCamera">Acessar Câmera</button>
+            <button id="btnVideo">Carregar Vídeo</button>
+            <button id="btnImagem">Carregar Imagem</button>
+
+            <hr>
+
+            <button id="btnGrayscale">Acizentar</button>
+            <button id="btnNegative">negativar</button>
+            <button id="btnOtsu">Otsu</button>
+        </div>
+
+        <input type="file" id="inputVideo" accept="video/*" style="display: none;">
+        <input type="file" id="inputImagem" accept="image/*" style="display: none;">
+        <video id="videoPlayer" controls autoplay playsinline style="display: none;"></video>
+
+        <div id="originalImageContainer">
+            <h2>Imagem Original</h2>
+            <img id="originalImage" src="" alt="Imagem original" />
+        </div>
+
+        <div id="processedImageContainer">
+            <h2>Imagem Processada</h2>
+            <img id="processedImage" src="" alt="Imagem processada (cinza)" />
+        </div>
+    </div>
+
+    <script>
+        const btnCamera = document.getElementById('btnCamera');
+        const btnVideo = document.getElementById('btnVideo');
+        const btnImagem = document.getElementById('btnImagem');
+        const btnGrayscale = document.getElementById('btnGrayscale');
+        const btnNegative = document.getElementById('btnNegative');
+
+        const inputVideo = document.getElementById('inputVideo');
+        const inputImagem = document.getElementById('inputImagem');
+
+        const videoPlayer = document.getElementById('videoPlayer');
+        const originalImage = document.getElementById('originalImage');
+        const processedImage = document.getElementById('processedImage');
+
+        let currentImageFile = null; 
+
+        // --- Acessar a Câmera ---
+        btnCamera.addEventListener('click', async () => {
+             
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                videoPlayer.srcObject = stream;
+                videoPlayer.style.display = 'block';
+            } catch (err) {
+                console.error("Erro ao acessar a câmera: ", err);
+                alert("Não foi possível acessar a câmera. Verifique as permissões do navegador.");
+            }
+        });
+
+        // --- Carregar Vídeo ---
+        btnVideo.addEventListener('click', () => {
+            
+            inputVideo.click();
+        });
+
+        inputVideo.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const fileURL = URL.createObjectURL(file);
+                videoPlayer.src = fileURL;
+                videoPlayer.style.display = 'block';
+            }
+        });
+
+        // --- Carregar Imagem ---
+        btnImagem.addEventListener('click', () => {
+             
+            inputImagem.click();
+        });
+
+        inputImagem.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                currentImageFile = file;
+                const fileURL = URL.createObjectURL(file);
+                originalImage.src = fileURL;
+                originalImage.style.display = 'block';
+                btnGrayscale.disabled = false;
+                btnNegative.disabled = false;
+            }
+        });
+
+        // --- para Cinza ---
+        btnGrayscale.addEventListener('click', async () => {
+            if (!currentImageFile) {
+                alert("Por favor, carregue uma imagem primeiro.");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('image', currentImageFile);
+
+            try {
+                const response = await fetch('/convert_to_grayscale', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Erro do servidor: ${response.statusText}`);
+                }
+
+                const data = await response.json(); 
+
+                if (data.grayscale_image) {
+                    processedImage.src = 'data:image/jpeg;base64,' + data.grayscale_image;
+                    processedImage.style.display = 'block';
+                } else {
+                    alert("O servidor não retornou a imagem em cinza.");
+                }
+
+            } catch (error) {
+                console.error("Erro ao converter para cinza:", error);
+                alert("Ocorreu um erro ao converter a imagem. Verifique o console para mais detalhes.");
+            }
+        });
+
+
+        // --- inverter ---
+        btnNegative.addEventListener('click', async () => {
+            if (!currentImageFile) {
+                alert("Por favor, carregue uma imagem primeiro.");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('image', currentImageFile);
+
+            try {
+                const response = await fetch('/convert_to_negative', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Erro do servidor: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+
+                if (data.negative_img) {
+                    processedImage.src = 'data:image/jpeg;base64,' + data.negative_img;
+                    processedImage.style.display = 'block';
+                } else {
+                    alert("O servidor não retornou a imagem Invertida.");
+                }
+
+            } catch (error) {
+                console.error("Erro ao Inverter:", error);
+                alert("Ocorreu um erro ao converter a imagem. Verifique o console para mais detalhes.");
+            }
+        });
+    </script>
+</body>
+
+</html>
