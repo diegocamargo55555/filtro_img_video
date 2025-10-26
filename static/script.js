@@ -15,7 +15,8 @@ const kernelSize = document.getElementById('kernelSize');
 const btnHistogram = document.getElementById('btnHistogram');
 const btnDetectarPessoa = document.getElementById('btnDetectarPessoa');
 const btnDetectarCachorro = document.getElementById('btnDetectarCachorro');
-btnCalcularMetricas.disabled = false;
+const btnContarObjetos = document.getElementById('btnContarObjetos');
+const btnCalcularMetricas = document.getElementById('btnCalcularMetricas');
 
 const inputVideo = document.getElementById('inputVideo');
 const inputImagem = document.getElementById('inputImagem');
@@ -31,6 +32,7 @@ const metricasInfoDiv = document.getElementById('metricasInfo');
 const areaInfoP = document.getElementById('areaInfo');
 const perimetroInfoP = document.getElementById('perimetroInfo');
 const diametroInfoP = document.getElementById('diametroInfo');
+const contagemInfoP = document.getElementById('contagemInfo');
 
 let currentImageFile = null;
 let currentVideoStream = null;
@@ -44,6 +46,8 @@ function hideAllMedia() {
     processedImage.style.display = 'none';
     processedCanvas.style.display = 'none';
     videoPlayer.style.display = 'none';
+    metricasInfoDiv.style.display = 'none';
+    
 }
 
 function enableFilterButtons() {
@@ -60,8 +64,8 @@ function enableFilterButtons() {
     btnHistogram.disabled = false;
     btnDetectarPessoa.disabled = false;
     btnDetectarCachorro.disabled = false;
-    const btnCalcularMetricas = document.getElementById('btnCalcularMetricas'); // Add this line
-}
+    btnContarObjetos.disabled = false;
+    btnCalcularMetricas.disabled = false;}
 
 function stopVideoProcessing() {
     if (animationFrameId) {
@@ -622,6 +626,48 @@ btnCalcularMetricas.addEventListener('click', async () => {
         }
     } else if (isProcessingVideo) {
          thresholdInfo.textContent = 'Cálculo de métricas disponível apenas para imagens.';
+         metricasInfoDiv.style.display = 'none';
+    }
+});
+
+btnContarObjetos.addEventListener('click', async () => {
+    // This button works best with images that can be binarized
+    if (!isProcessingVideo && currentImageFile) {
+        // Clear previous results and hide processed image/canvas
+        processedImage.src = '';
+        processedImage.style.display = 'none';
+        processedCanvas.style.display = 'none';
+        thresholdInfo.textContent = 'Binarizando e contando objetos...'; // Indicate processing
+        metricasInfoDiv.style.display = 'none'; // Hide results div initially
+        contagemInfoP.textContent = ''; // Clear previous count
+
+
+        const formData = new FormData();
+        formData.append('image', currentImageFile);
+
+        try {
+            const response = await fetch('/contar_objetos', {
+                method: 'POST',
+                body: formData,
+            });
+            const data = await response.json();
+
+            if (response.ok) {
+                 metricasInfoDiv.style.display = 'block'; 
+                 contagemInfoP.textContent = `Objetos Contados (após binarização): ${data.object_count}`;
+                 thresholdInfo.textContent = ''; // Clear processing message
+
+            } else {
+                thresholdInfo.textContent = `Erro: ${data.error || 'Não foi possível contar objetos.'}`;
+                metricasInfoDiv.style.display = 'none';
+            }
+        } catch (error) {
+            console.error("Erro ao contar objetos:", error);
+            thresholdInfo.textContent = 'Erro ao conectar com o servidor para contagem.';
+            metricasInfoDiv.style.display = 'none';
+        }
+    } else if (isProcessingVideo) {
+         thresholdInfo.textContent = 'Contagem de objetos disponível apenas para imagens.';
          metricasInfoDiv.style.display = 'none';
     }
 });

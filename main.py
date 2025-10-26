@@ -136,5 +136,13 @@ def calcular_metricas():
         'diameter': diameter 
     }
 
+
+@app.route('/contar_objetos', methods=['POST'])
+def contar_objetos():
+    img_original = ler_imagem(request.files)
+    binary_image, _ = filtros.aplicar_otsu(img_original)             
+    object_count = filtros.contagem_por_regiao(binary_image)
+    return {'object_count': object_count}
+
 if __name__ == '__main__':
     app.run(debug=True)

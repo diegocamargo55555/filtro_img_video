@@ -32,16 +32,12 @@ def aplicar_otsu(img):
 
 
 def suavizar_pela_media(img, kernel_size):
-    
     blurred_image = cv2.blur(img, (kernel_size, kernel_size))
-    
     return blurred_image
 
 
 def suavizar_pela_mediana(img, kernel_size):
-    
     median_image = cv2.medianBlur(img, kernel_size)
-    
     return median_image
 
 
@@ -52,7 +48,6 @@ def detectar_bordas_canny(img, t_lower=100, t_upper=200):
         gray_image = img
         
     blurred_image = cv2.GaussianBlur(gray_image, (5, 5), 0)
-    
     canny_edges = cv2.Canny(blurred_image, t_lower, t_upper)
     
     return canny_edges
@@ -79,54 +74,31 @@ def aplicar_fechamento(img, kernel_size=5):
     return close_image
 
 def detectar_com_yolo(img, classes_desejadas):
-    # Roda a detecção do YOLO
     results = model(img)
-    
-    # Itera pelos resultados
+
     for r in results:
         boxes = r.boxes
         for box in boxes:
-            # Pega o ID da classe
             cls_id = int(box.cls[0])
-            
-            # Verifica se a classe é uma das que queremos detectar
             if cls_id in classes_desejadas:
-                # Pega as coordenadas da caixa
                 x1, y1, x2, y2 = map(int, box.xyxy[0])
-                # Pega a confiança (score)
                 conf = float(box.conf[0])
-                # Pega o nome da classe
                 cls_name = coco_names[cls_id]
                 
-                # Desenha o retângulo
                 cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
-                # Escreve o texto (label)
                 label = f'{cls_name} {conf:.2f}'
                 cv2.putText(img, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
                 
     return img
 
 
-# --- MODIFICAR A FUNÇÃO 'detectar_pessoas' ---
 def detectar_pessoas(img):
-    # Remove o código antigo do Haar Cascade
-    # gray_image = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)    
-    # pessoas = person_cascade.detectMultiScale(gray_image, 1.1, 4)
-    # for (x, y, w, h) in pessoas:
-    #     cv2.rectangle(img, (x, y), (x+w, y+h), (0, 255, 0), 2)
-    # return img
-    
-    # Adiciona a nova lógica YOLO (classe 0 é 'person')
     return detectar_com_yolo(img, classes_desejadas=[0])
 
 
-# --- ADICIONAR NOVA FUNÇÃO 'detectar_cachorros' ---
-# (Coloque antes ou depois de 'gerar_histograma')
 def detectar_cachorros(img):
-    # Classe 16 é 'dog' no modelo COCO
     return detectar_com_yolo(img, classes_desejadas=[16])
 
-    
 
 def gerar_histograma(img):
     hist_height = 256
@@ -176,13 +148,25 @@ def gerar_histograma(img):
             
     return hist_image
 
-def calcular_metricas_imagem(img):
-    if img is None:
-        return None, None, None
-    
+def calcular_metricas_imagem(img):    
     height, width = img.shape[:2]
     area = width * height
     perimeter = 2 * (width + height)
     diameter = np.sqrt(width**2 + height**2) 
     
     return area, perimeter, diameter
+
+
+def contagem_por_regiao(img):
+
+    num_white_pixels = np.sum(img == 255)
+    num_black_pixels = np.sum(img == 0)
+    
+    if num_black_pixels > num_white_pixels:
+        img = cv2.bitwise_not(img)
+        
+    num_labels, _, _, _ = cv2.connectedComponentsWithStats(img, connectivity=8) 
+
+    num_objects = num_labels - 1
+
+    return num_objects
