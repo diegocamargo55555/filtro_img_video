@@ -46,10 +46,10 @@ function stopVideoProcessing() {
         cancelAnimationFrame(animationFrameId);
         animationFrameId = null;
     }
-    isProcessingVideo = false;
+    // NÃO definimos isProcessingVideo = false aqui.
+    // Essa variável só deve mudar ao carregar uma IMAGEM.
     currentFilter = null;
 }
-
 // --- Acessar a Câmera ---
 btnCamera.addEventListener('click', async () => {
     try {
