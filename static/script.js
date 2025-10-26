@@ -61,7 +61,6 @@ btnCamera.addEventListener('click', async () => {
         videoPlayer.srcObject = stream;
         originalVideo.srcObject = stream;
         
-        videoPlayer.style.display = 'block';
         originalVideo.style.display = 'block';
         videoPlayer.play();
         originalVideo.play();
@@ -90,7 +89,6 @@ inputVideo.addEventListener('change', (event) => {
         videoPlayer.src = fileURL;
         originalVideo.src = fileURL;
         
-        videoPlayer.style.display = 'block';
         originalVideo.style.display = 'block';
         videoPlayer.play();
         originalVideo.play();
@@ -129,8 +127,7 @@ async function processVideoFrame(filterEndpoint, filterName) {
 
     const canvas = videoCanvas;
     const ctx = canvas.getContext('2d');
-    const video = originalVideo;
-
+    const video = videoPlayer;
     if (video.readyState === video.HAVE_ENOUGH_DATA) {
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
