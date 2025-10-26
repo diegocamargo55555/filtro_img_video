@@ -5,49 +5,184 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Media Loader com Python</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='index.css') }}">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            background: #f5f5f5;
+            display: flex;
+            height: 100vh;
+        }
+
+        .sidebar {
+            width: 240px;
+            background: white;
+            border-right: 1px solid #e0e0e0;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .sidebar h3 {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: #999;
+            margin: 20px 0 10px 0;
+            letter-spacing: 0.5px;
+        }
+
+        .sidebar h3:first-child {
+            margin-top: 0;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 8px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            text-align: left;
+        }
+
+        button:hover:not(:disabled) {
+            background: #f9f9f9;
+        }
+
+        button:disabled {
+            color: #ccc;
+            cursor: not-allowed;
+        }
+
+        select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
+        .main {
+            flex: 1;
+            padding: 40px;
+            overflow: auto;
+        }
+
+        .images {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            max-width: 1200px;
+        }
+
+        .image-container {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            padding: 20px;
+        }
+
+        .image-container h2 {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .image-container img {
+            width: 100%;
+            border-radius: 4px;
+            display: none;
+        }
+
+        .image-container img[src]:not([src=""]) {
+            display: block;
+        }
+
+        #thresholdInfo {
+            margin-top: 10px;
+            font-size: 13px;
+            color: #666;
+        }
+
+        #videoPlayer {
+            width: 100%;
+            max-width: 800px;
+            margin-top: 20px;
+            border-radius: 4px;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+            }
+            .sidebar {
+                width: 100%;
+                border-right: none;
+                border-bottom: 1px solid #e0e0e0;
+            }
+            .images {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
 </head>
 
 <body>
-    <div class="container">
-        <div class="botoes">
-            <button id="btnCamera">Acessar Câmera</button>
-            <button id="btnVideo">Carregar Vídeo</button>
-            <button id="btnImagem">Carregar Imagem</button>
+    <div class="sidebar">
+        <h3>Carregar</h3>
+        <button id="btnCamera">Câmera</button>
+        <button id="btnVideo">Vídeo</button>
+        <button id="btnImagem">Imagem</button>
 
-            <hr>
+        <h3>Filtros</h3>
+        <button id="btnGrayscale" disabled>Escala de Cinza</button>
+        <button id="btnNegative" disabled>Negativo</button>
+        <button id="btnOtsu" disabled>Otsu</button>
+        <button id="btnMedia" disabled>Média</button>
+        <button id="btnMediana" disabled>Mediana</button>
 
-            <button id="btnGrayscale">Acizentar</button>
-            <button id="btnNegative">Negativar</button>
-            <button id="btnOtsu">Otsu (Binário)</button>
-            <button id="btnMedia">Suavizar (Média)</button>
-            <button id="btnMediana">Suavizar (Mediana)</button>
-            
-            <div style="margin-top: 10px;">
-                <label for="kernelSize">Tamanho do Kernel: </label>
-                <select id="kernelSize">
-                    <option value="3">3x3</option>
-                    <option value="5" selected>5x5</option>
-                    <option value="7">7x7</option>
-                    <option value="9">9x9</option>
-                    <option value="11">11x11</option>
-                </select>
+        <h3>Kernel</h3>
+        <select id="kernelSize">
+            <option value="3">3x3</option>
+            <option value="5" selected>5x5</option>
+            <option value="7">7x7</option>
+            <option value="9">9x9</option>
+            <option value="11">11x11</option>
+        </select>
+    </div>
+
+    <div class="main">
+        <input type="file" id="inputVideo" accept="video/*">
+        <input type="file" id="inputImagem" accept="image/*">
+        
+        <video id="videoPlayer" style="display: none;"></video>
+        <canvas id="videoCanvas" style="display: none;"></canvas>
+
+        <div class="images">
+            <div class="image-container">
+                <h2>Original</h2>
+                <img id="originalImage" src="" alt="Imagem original" />
+                <video id="originalVideo" controls autoplay playsinline style="display: none; width: 100%; border-radius: 4px;"></video>
             </div>
-        </div>
 
-        <input type="file" id="inputVideo" accept="video/*" style="display: none;">
-        <input type="file" id="inputImagem" accept="image/*" style="display: none;">
-        <video id="videoPlayer" controls autoplay playsinline style="display: none;"></video>
-
-        <div id="originalImageContainer">
-            <h2>Imagem Original</h2>
-            <img id="originalImage" src="" alt="Imagem original" />
-        </div>
-
-        <div id="processedImageContainer">
-            <h2>Imagem Processada</h2>
-            <img id="processedImage" src="" alt="Imagem processada (cinza)" />
-            <p id="thresholdInfo" style="margin-top: 10px; font-weight: bold;"></p>
+            <div class="image-container">
+                <h2>Processada</h2>
+                <img id="processedImage" src="" alt="Imagem processada" />
+                <canvas id="processedCanvas" style="display: none; width: 100%; border-radius: 4px;"></canvas>
+                <p id="thresholdInfo"></p>
+            </div>
         </div>
     </div>
 
@@ -60,24 +195,69 @@
         const btnOtsu = document.getElementById('btnOtsu');
         const btnMedia = document.getElementById('btnMedia');
         const btnMediana = document.getElementById('btnMediana');
+        const kernelSize = document.getElementById('kernelSize');
 
         const inputVideo = document.getElementById('inputVideo');
         const inputImagem = document.getElementById('inputImagem');
 
         const videoPlayer = document.getElementById('videoPlayer');
+        const videoCanvas = document.getElementById('videoCanvas');
         const originalImage = document.getElementById('originalImage');
+        const originalVideo = document.getElementById('originalVideo');
         const processedImage = document.getElementById('processedImage');
+        const processedCanvas = document.getElementById('processedCanvas');
         const thresholdInfo = document.getElementById('thresholdInfo');
 
-        let currentImageFile = null; 
+        let currentImageFile = null;
+        let currentVideoStream = null;
+        let isProcessingVideo = false;
+        let currentFilter = null;
+        let animationFrameId = null;
+
+        function hideAllMedia() {
+            originalImage.style.display = 'none';
+            originalVideo.style.display = 'none';
+            processedImage.style.display = 'none';
+            processedCanvas.style.display = 'none';
+            videoPlayer.style.display = 'none';
+        }
+
+        function enableFilterButtons() {
+            btnGrayscale.disabled = false;
+            btnNegative.disabled = false;
+            btnOtsu.disabled = false;
+            btnMedia.disabled = false;
+            btnMediana.disabled = false;
+        }
+
+        function stopVideoProcessing() {
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+            isProcessingVideo = false;
+            currentFilter = null;
+        }
 
         // --- Acessar a Câmera ---
         btnCamera.addEventListener('click', async () => {
-             
             try {
+                stopVideoProcessing();
+                hideAllMedia();
+                
                 const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                currentVideoStream = stream;
                 videoPlayer.srcObject = stream;
+                originalVideo.srcObject = stream;
+                
                 videoPlayer.style.display = 'block';
+                originalVideo.style.display = 'block';
+                videoPlayer.play();
+                originalVideo.play();
+                
+                enableFilterButtons();
+                isProcessingVideo = true;
+                thresholdInfo.textContent = '';
             } catch (err) {
                 console.error("Erro ao acessar a câmera: ", err);
                 alert("Não foi possível acessar a câmera. Verifique as permissões do navegador.");
@@ -86,148 +266,290 @@
 
         // --- Carregar Vídeo ---
         btnVideo.addEventListener('click', () => {
-            
             inputVideo.click();
         });
 
         inputVideo.addEventListener('change', (event) => {
             const file = event.target.files[0];
             if (file) {
+                stopVideoProcessing();
+                hideAllMedia();
+                
                 const fileURL = URL.createObjectURL(file);
                 videoPlayer.src = fileURL;
+                originalVideo.src = fileURL;
+                
                 videoPlayer.style.display = 'block';
+                originalVideo.style.display = 'block';
+                videoPlayer.play();
+                originalVideo.play();
+                
+                enableFilterButtons();
+                isProcessingVideo = true;
+                thresholdInfo.textContent = '';
             }
         });
 
         // --- Carregar Imagem ---
         btnImagem.addEventListener('click', () => {
-             
             inputImagem.click();
         });
 
         inputImagem.addEventListener('change', (event) => {
             const file = event.target.files[0];
             if (file) {
+                stopVideoProcessing();
+                hideAllMedia();
+                
                 currentImageFile = file;
                 const fileURL = URL.createObjectURL(file);
                 originalImage.src = fileURL;
                 originalImage.style.display = 'block';
-                btnGrayscale.disabled = false;
-                btnNegative.disabled = false;
-                btnOtsu.disabled = false;
+                
+                enableFilterButtons();
+                isProcessingVideo = false;
                 thresholdInfo.textContent = '';
             }
         });
 
-        // --- para Cinza ---
-        btnGrayscale.addEventListener('click', async () => {
-            if (!currentImageFile) {
-                alert("Por favor, carregue uma imagem primeiro.");
-                return;
-            }
+        // Função para processar vídeo frame a frame
+        async function processVideoFrame(filterEndpoint, filterName) {
+            if (!isProcessingVideo || currentFilter !== filterName) return;
 
-            const formData = new FormData();
-            formData.append('image', currentImageFile);
+            const canvas = videoCanvas;
+            const ctx = canvas.getContext('2d');
+            const video = originalVideo;
 
-            try {
-                const response = await fetch('/convert_to_grayscale', {
-                    method: 'POST',
-                    body: formData,
-                });
+            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-                if (!response.ok) {
-                    throw new Error(`Erro do servidor: ${response.statusText}`);
-                }
+                canvas.toBlob(async (blob) => {
+                    if (!blob || currentFilter !== filterName) return;
 
-                const data = await response.json(); 
-
-                if (data.grayscale_image) {
-                    processedImage.src = 'data:image/jpeg;base64,' + data.grayscale_image;
-                    processedImage.style.display = 'block';
-                    thresholdInfo.textContent = '';
-                } else {
-                    alert("O servidor não retornou a imagem em cinza.");
-                }
-
-            } catch (error) {
-                console.error("Erro ao converter para cinza:", error);
-                alert("Ocorreu um erro ao converter a imagem. Verifique o console para mais detalhes.");
-            }
-        });
-
-
-        // --- inverter ---
-        btnNegative.addEventListener('click', async () => {
-            if (!currentImageFile) {
-                alert("Por favor, carregue uma imagem primeiro.");
-                return;
-            }
-
-            const formData = new FormData();
-            formData.append('image', currentImageFile);
-
-            try {
-                const response = await fetch('/convert_to_negative', {
-                    method: 'POST',
-                    body: formData,
-                });
-
-                if (!response.ok) {
-                    throw new Error(`Erro do servidor: ${response.statusText}`);
-                }
-
-                const data = await response.json();
-
-                if (data.negative_img) {
-                    processedImage.src = 'data:image/jpeg;base64,' + data.negative_img;
-                    processedImage.style.display = 'block';
-                    thresholdInfo.textContent = '';
-                } else {
-                    alert("O servidor não retornou a imagem Invertida.");
-                }
-
-            } catch (error) {
-                console.error("Erro ao Inverter:", error);
-                alert("Ocorreu um erro ao converter a imagem. Verifique o console para mais detalhes.");
-            }
-        });
-
-        // --- Otsu (Binarização) ---
-        btnOtsu.addEventListener('click', async () => {
-            if (!currentImageFile) {
-                alert("Por favor, carregue uma imagem primeiro.");
-                return;
-            }
-
-            const formData = new FormData();
-            formData.append('image', currentImageFile);
-
-            try {
-                const response = await fetch('/convert_to_otsu', {
-                    method: 'POST',
-                    body: formData,
-                });
-
-                if (!response.ok) {
-                    throw new Error(`Erro do servidor: ${response.statusText}`);
-                }
-
-                const data = await response.json();
-
-                if (data.otsu_image) {
-                    processedImage.src = 'data:image/jpeg;base64,' + data.otsu_image;
-                    processedImage.style.display = 'block';
-                    
-                    if (data.threshold_value) {
-                        thresholdInfo.textContent = `Limiar calculado pelo método de Otsu: ${data.threshold_value.toFixed(2)}`;
+                    const formData = new FormData();
+                    formData.append('image', blob, 'frame.jpg');
+                    if (filterName === 'media' || filterName === 'mediana') {
+                        formData.append('kernel_size', kernelSize.value);
                     }
-                } else {
-                    alert("O servidor não retornou a imagem binarizada.");
-                }
 
-            } catch (error) {
-                console.error("Erro ao aplicar Otsu:", error);
-                alert("Ocorreu um erro ao processar a imagem. Verifique o console para mais detalhes.");
+                    try {
+                        const response = await fetch(filterEndpoint, {
+                            method: 'POST',
+                            body: formData,
+                        });
+
+                        if (!response.ok || currentFilter !== filterName) return;
+
+                        const data = await response.json();
+                        const imageKey = Object.keys(data).find(key => key.includes('image'));
+                        
+                        if (data[imageKey] && currentFilter === filterName) {
+                            const processedCtx = processedCanvas.getContext('2d');
+                            const img = new Image();
+                            img.onload = () => {
+                                if (currentFilter === filterName) {
+                                    processedCanvas.width = img.width;
+                                    processedCanvas.height = img.height;
+                                    processedCtx.drawImage(img, 0, 0);
+                                }
+                            };
+                            img.src = 'data:image/jpeg;base64,' + data[imageKey];
+                        }
+                    } catch (error) {
+                        console.error('Erro ao processar frame:', error);
+                    }
+
+                    if (currentFilter === filterName) {
+                        animationFrameId = requestAnimationFrame(() => processVideoFrame(filterEndpoint, filterName));
+                    }
+                }, 'image/jpeg', 0.8);
+            } else {
+                if (currentFilter === filterName) {
+                    animationFrameId = requestAnimationFrame(() => processVideoFrame(filterEndpoint, filterName));
+                }
+            }
+        }
+
+        // --- Filtros ---
+        btnGrayscale.addEventListener('click', async () => {
+            if (isProcessingVideo) {
+                stopVideoProcessing();
+                currentFilter = 'grayscale';
+                processedCanvas.style.display = 'block';
+                thresholdInfo.textContent = 'Processando vídeo...';
+                processVideoFrame('/convert_to_grayscale', 'grayscale');
+            } else if (currentImageFile) {
+                const formData = new FormData();
+                formData.append('image', currentImageFile);
+
+                try {
+                    const response = await fetch('/convert_to_grayscale', {
+                        method: 'POST',
+                        body: formData,
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`Erro do servidor: ${response.statusText}`);
+                    }
+
+                    const data = await response.json();
+
+                    if (data.grayscale_image) {
+                        processedImage.src = 'data:image/jpeg;base64,' + data.grayscale_image;
+                        processedImage.style.display = 'block';
+                        thresholdInfo.textContent = '';
+                    }
+                } catch (error) {
+                    console.error("Erro ao converter para cinza:", error);
+                    alert("Ocorreu um erro ao converter a imagem.");
+                }
+            }
+        });
+
+        btnNegative.addEventListener('click', async () => {
+            if (isProcessingVideo) {
+                stopVideoProcessing();
+                currentFilter = 'negative';
+                processedCanvas.style.display = 'block';
+                thresholdInfo.textContent = 'Processando vídeo...';
+                processVideoFrame('/convert_to_negative', 'negative');
+            } else if (currentImageFile) {
+                const formData = new FormData();
+                formData.append('image', currentImageFile);
+
+                try {
+                    const response = await fetch('/convert_to_negative', {
+                        method: 'POST',
+                        body: formData,
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`Erro do servidor: ${response.statusText}`);
+                    }
+
+                    const data = await response.json();
+
+                    if (data.negative_img) {
+                        processedImage.src = 'data:image/jpeg;base64,' + data.negative_img;
+                        processedImage.style.display = 'block';
+                        thresholdInfo.textContent = '';
+                    }
+                } catch (error) {
+                    console.error("Erro ao inverter:", error);
+                    alert("Ocorreu um erro ao converter a imagem.");
+                }
+            }
+        });
+
+        btnOtsu.addEventListener('click', async () => {
+            if (isProcessingVideo) {
+                stopVideoProcessing();
+                currentFilter = 'otsu';
+                processedCanvas.style.display = 'block';
+                thresholdInfo.textContent = 'Processando vídeo...';
+                processVideoFrame('/convert_to_otsu', 'otsu');
+            } else if (currentImageFile) {
+                const formData = new FormData();
+                formData.append('image', currentImageFile);
+
+                try {
+                    const response = await fetch('/convert_to_otsu', {
+                        method: 'POST',
+                        body: formData,
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`Erro do servidor: ${response.statusText}`);
+                    }
+
+                    const data = await response.json();
+
+                    if (data.otsu_image) {
+                        processedImage.src = 'data:image/jpeg;base64,' + data.otsu_image;
+                        processedImage.style.display = 'block';
+                        
+                        if (data.threshold_value) {
+                            thresholdInfo.textContent = `Limiar: ${data.threshold_value.toFixed(2)}`;
+                        }
+                    }
+                } catch (error) {
+                    console.error("Erro ao aplicar Otsu:", error);
+                    alert("Ocorreu um erro ao processar a imagem.");
+                }
+            }
+        });
+
+        btnMedia.addEventListener('click', async () => {
+            if (isProcessingVideo) {
+                stopVideoProcessing();
+                currentFilter = 'media';
+                processedCanvas.style.display = 'block';
+                thresholdInfo.textContent = `Processando vídeo (Kernel: ${kernelSize.value}x${kernelSize.value})...`;
+                processVideoFrame('/suavizar_media', 'media');
+            } else if (currentImageFile) {
+                const formData = new FormData();
+                formData.append('image', currentImageFile);
+                formData.append('kernel_size', kernelSize.value);
+
+                try {
+                    const response = await fetch('/suavizar_media', {
+                        method: 'POST',
+                        body: formData,
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`Erro do servidor: ${response.statusText}`);
+                    }
+
+                    const data = await response.json();
+
+                    if (data.blurred_image) {
+                        processedImage.src = 'data:image/jpeg;base64,' + data.blurred_image;
+                        processedImage.style.display = 'block';
+                        thresholdInfo.textContent = `Média (Kernel: ${kernelSize.value}x${kernelSize.value})`;
+                    }
+                } catch (error) {
+                    console.error("Erro ao suavizar:", error);
+                    alert("Ocorreu um erro ao processar a imagem.");
+                }
+            }
+        });
+
+        btnMediana.addEventListener('click', async () => {
+            if (isProcessingVideo) {
+                stopVideoProcessing();
+                currentFilter = 'mediana';
+                processedCanvas.style.display = 'block';
+                thresholdInfo.textContent = `Processando vídeo (Kernel: ${kernelSize.value}x${kernelSize.value})...`;
+                processVideoFrame('/suavizar_mediana', 'mediana');
+            } else if (currentImageFile) {
+                const formData = new FormData();
+                formData.append('image', currentImageFile);
+                formData.append('kernel_size', kernelSize.value);
+
+                try {
+                    const response = await fetch('/suavizar_mediana', {
+                        method: 'POST',
+                        body: formData,
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`Erro do servidor: ${response.statusText}`);
+                    }
+
+                    const data = await response.json();
+
+                    if (data.median_image) {
+                        processedImage.src = 'data:image/jpeg;base64,' + data.median_image;
+                        processedImage.style.display = 'block';
+                        thresholdInfo.textContent = `Mediana (Kernel: ${kernelSize.value}x${kernelSize.value})`;
+                    }
+                } catch (error) {
+                    console.error("Erro ao suavizar:", error);
+                    alert("Ocorreu um erro ao processar a imagem.");
+                }
             }
         });
     </script>
