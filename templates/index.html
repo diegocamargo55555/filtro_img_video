@@ -325,6 +325,22 @@
                 canvas.height = video.videoHeight;
                 ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
+                // Processa com Canvas para filtros simples (mais rápido)
+                if (filterName === 'grayscale') {
+                    applyGrayscaleCanvas(canvas);
+                    if (currentFilter === filterName) {
+                        animationFrameId = requestAnimationFrame(() => processVideoFrame(filterEndpoint, filterName));
+                    }
+                    return;
+                } else if (filterName === 'negative') {
+                    applyNegativeCanvas(canvas);
+                    if (currentFilter === filterName) {
+                        animationFrameId = requestAnimationFrame(() => processVideoFrame(filterEndpoint, filterName));
+                    }
+                    return;
+                }
+
+                // Para filtros complexos (Otsu, Média, Mediana), envia ao servidor
                 canvas.toBlob(async (blob) => {
                     if (!blob || currentFilter !== filterName) return;
 
@@ -362,14 +378,54 @@
                     }
 
                     if (currentFilter === filterName) {
-                        animationFrameId = requestAnimationFrame(() => processVideoFrame(filterEndpoint, filterName));
+                        // Reduz FPS para 10fps no processamento de servidor
+                        setTimeout(() => {
+                            animationFrameId = requestAnimationFrame(() => processVideoFrame(filterEndpoint, filterName));
+                        }, 100);
                     }
-                }, 'image/jpeg', 0.8);
+                }, 'image/jpeg', 0.6);
             } else {
                 if (currentFilter === filterName) {
                     animationFrameId = requestAnimationFrame(() => processVideoFrame(filterEndpoint, filterName));
                 }
             }
+        }
+
+        // Filtro de escala de cinza usando Canvas (processamento local - rápido)
+        function applyGrayscaleCanvas(sourceCanvas) {
+            const ctx = sourceCanvas.getContext('2d');
+            const imageData = ctx.getImageData(0, 0, sourceCanvas.width, sourceCanvas.height);
+            const data = imageData.data;
+
+            for (let i = 0; i < data.length; i += 4) {
+                const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+                data[i] = gray;
+                data[i + 1] = gray;
+                data[i + 2] = gray;
+            }
+
+            const processedCtx = processedCanvas.getContext('2d');
+            processedCanvas.width = sourceCanvas.width;
+            processedCanvas.height = sourceCanvas.height;
+            processedCtx.putImageData(imageData, 0, 0);
+        }
+
+        // Filtro negativo usando Canvas (processamento local - rápido)
+        function applyNegativeCanvas(sourceCanvas) {
+            const ctx = sourceCanvas.getContext('2d');
+            const imageData = ctx.getImageData(0, 0, sourceCanvas.width, sourceCanvas.height);
+            const data = imageData.data;
+
+            for (let i = 0; i < data.length; i += 4) {
+                data[i] = 255 - data[i];
+                data[i + 1] = 255 - data[i + 1];
+                data[i + 2] = 255 - data[i + 2];
+            }
+
+            const processedCtx = processedCanvas.getContext('2d');
+            processedCanvas.width = sourceCanvas.width;
+            processedCanvas.height = sourceCanvas.height;
+            processedCtx.putImageData(imageData, 0, 0);
         }
 
         // --- Filtros ---
@@ -378,7 +434,7 @@
                 stopVideoProcessing();
                 currentFilter = 'grayscale';
                 processedCanvas.style.display = 'block';
-                thresholdInfo.textContent = 'Processando vídeo...';
+                thresholdInfo.textContent = 'Processando vídeo (tempo real)...';
                 processVideoFrame('/convert_to_grayscale', 'grayscale');
             } else if (currentImageFile) {
                 const formData = new FormData();
@@ -413,7 +469,7 @@
                 stopVideoProcessing();
                 currentFilter = 'negative';
                 processedCanvas.style.display = 'block';
-                thresholdInfo.textContent = 'Processando vídeo...';
+                thresholdInfo.textContent = 'Processando vídeo (tempo real)...';
                 processVideoFrame('/convert_to_negative', 'negative');
             } else if (currentImageFile) {
                 const formData = new FormData();
@@ -448,7 +504,7 @@
                 stopVideoProcessing();
                 currentFilter = 'otsu';
                 processedCanvas.style.display = 'block';
-                thresholdInfo.textContent = 'Processando vídeo...';
+                thresholdInfo.textContent = 'Processando vídeo (pode estar lento)...';
                 processVideoFrame('/convert_to_otsu', 'otsu');
             } else if (currentImageFile) {
                 const formData = new FormData();
@@ -486,7 +542,7 @@
                 stopVideoProcessing();
                 currentFilter = 'media';
                 processedCanvas.style.display = 'block';
-                thresholdInfo.textContent = `Processando vídeo (Kernel: ${kernelSize.value}x${kernelSize.value})...`;
+                thresholdInfo.textContent = `Processando vídeo (pode estar lento, Kernel: ${kernelSize.value}x${kernelSize.value})...`;
                 processVideoFrame('/suavizar_media', 'media');
             } else if (currentImageFile) {
                 const formData = new FormData();
@@ -522,7 +578,7 @@
                 stopVideoProcessing();
                 currentFilter = 'mediana';
                 processedCanvas.style.display = 'block';
-                thresholdInfo.textContent = `Processando vídeo (Kernel: ${kernelSize.value}x${kernelSize.value})...`;
+                thresholdInfo.textContent = `Processando vídeo (pode estar lento, Kernel: ${kernelSize.value}x${kernelSize.value})...`;
                 processVideoFrame('/suavizar_mediana', 'mediana');
             } else if (currentImageFile) {
                 const formData = new FormData();
