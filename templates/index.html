@@ -26,9 +26,11 @@
         <button id="btnDilate" disabled>Dilatação</button>
         <button id="btnOpen" disabled>Abertura</button>
         <button id="btnClose" disabled>Fechamento</button>
+        <button id="btnCalcularMetricas" disabled>Calcular Métricas</button>
         <button id="btnHistogram" disabled>Histograma</button>
         <button id="btnDetectarPessoa" disabled>Detectar Pessoa</button>
         <button id="btnDetectarCachorro" disabled>Detectar Cachorro</button>
+        
         <h3>Kernel</h3>
 
         <select id="kernelSize">
@@ -59,6 +61,13 @@
                 <img id="processedImage" src="" alt="Imagem processada" />
                 <canvas id="processedCanvas" style="display: none; width: 100%; border-radius: 4px;"></canvas>
                 <p id="thresholdInfo"></p>
+            </div>
+
+            <div id="metricasInfo" style="margin-top: 20px; font-size: 14px; background: white; border: 1px solid #e0e0e0; border-radius: 4px; padding: 15px; max-width: 600px; display: none;">
+                <h3>Métricas da Imagem Original:</h3>
+                <p id="areaInfo"></p>
+                <p id="perimetroInfo"></p>
+                <p id="diametroInfo"></p>
             </div>
         </div>
     </div>

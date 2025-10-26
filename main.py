@@ -115,5 +115,26 @@ def detectar_pessoas_route():
 def detectar_cachorros_route():
     return {'dog_image': aplicar_filtro(request.files, filtros.detectar_cachorros)}
 
+
+@app.route('/calcular_metricas', methods=['POST'])
+def calcular_metricas():
+    img_original = ler_imagem(request.files) 
+    
+    if isinstance(img_original, tuple): 
+        return img_original 
+    if img_original is None:
+         return "Erro ao processar a imagem para cálculo.", 400
+
+    area, perimeter, diameter = filtros.calcular_metricas_imagem(img_original)
+
+    if area is None:
+         return "Não foi possível calcular as métricas.", 400
+
+    return {
+        'area': area,
+        'perimeter': perimeter,
+        'diameter': diameter 
+    }
+
 if __name__ == '__main__':
     app.run(debug=True)

@@ -1,12 +1,12 @@
 import cv2
 import numpy as np  
 from ultralytics import YOLO
+
+
 model = YOLO('yolov8n.pt')
 coco_names = model.names
 
 
-person_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-animal_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalcatface.xml')
 
 def converter_para_cinza(img):
     gray_image = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -175,3 +175,14 @@ def gerar_histograma(img):
                     thickness=bin_width)
             
     return hist_image
+
+def calcular_metricas_imagem(img):
+    if img is None:
+        return None, None, None
+    
+    height, width = img.shape[:2]
+    area = width * height
+    perimeter = 2 * (width + height)
+    diameter = np.sqrt(width**2 + height**2) 
+    
+    return area, perimeter, diameter

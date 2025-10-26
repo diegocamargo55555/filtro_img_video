@@ -15,6 +15,7 @@ const kernelSize = document.getElementById('kernelSize');
 const btnHistogram = document.getElementById('btnHistogram');
 const btnDetectarPessoa = document.getElementById('btnDetectarPessoa');
 const btnDetectarCachorro = document.getElementById('btnDetectarCachorro');
+btnCalcularMetricas.disabled = false;
 
 const inputVideo = document.getElementById('inputVideo');
 const inputImagem = document.getElementById('inputImagem');
@@ -26,6 +27,10 @@ const originalVideo = document.getElementById('originalVideo');
 const processedImage = document.getElementById('processedImage');
 const processedCanvas = document.getElementById('processedCanvas');
 const thresholdInfo = document.getElementById('thresholdInfo');
+const metricasInfoDiv = document.getElementById('metricasInfo');
+const areaInfoP = document.getElementById('areaInfo');
+const perimetroInfoP = document.getElementById('perimetroInfo');
+const diametroInfoP = document.getElementById('diametroInfo');
 
 let currentImageFile = null;
 let currentVideoStream = null;
@@ -55,6 +60,7 @@ function enableFilterButtons() {
     btnHistogram.disabled = false;
     btnDetectarPessoa.disabled = false;
     btnDetectarCachorro.disabled = false;
+    const btnCalcularMetricas = document.getElementById('btnCalcularMetricas'); // Add this line
 }
 
 function stopVideoProcessing() {
@@ -574,5 +580,48 @@ btnDetectarCachorro.addEventListener('click', async () => {
         } catch (error) {
             console.error("Erro ao detectar cachorros:", error);
         }
+    }
+});
+
+
+btnCalcularMetricas.addEventListener('click', async () => {
+    // This button only works for images
+    if (!isProcessingVideo && currentImageFile) {
+        // Clear previous results and hide processed image/canvas
+        processedImage.src = '';
+        processedImage.style.display = 'none';
+        processedCanvas.style.display = 'none';
+        thresholdInfo.textContent = 'Calculando métricas...'; // Indicate processing
+        metricasInfoDiv.style.display = 'none'; // Hide metrics div initially
+
+        const formData = new FormData();
+        formData.append('image', currentImageFile);
+
+        try {
+            const response = await fetch('/calcular_metricas', {
+                method: 'POST',
+                body: formData,
+            });
+            const data = await response.json();
+            
+            if (response.ok) {
+                 // Display the results
+                 areaInfoP.textContent = `Área: ${data.area} pixels`;
+                 perimetroInfoP.textContent = `Perímetro: ${data.perimeter} pixels`;
+                 diametroInfoP.textContent = `Diagonal (Diâmetro Total): ${data.diameter.toFixed(2)} pixels`;
+                 metricasInfoDiv.style.display = 'block'; // Show metrics div
+                 thresholdInfo.textContent = ''; // Clear processing message
+            } else {
+                thresholdInfo.textContent = `Erro: ${data.error || 'Não foi possível calcular.'}`;
+                metricasInfoDiv.style.display = 'none';
+            }
+        } catch (error) {
+            console.error("Erro ao calcular métricas:", error);
+            thresholdInfo.textContent = 'Erro ao conectar com o servidor.';
+            metricasInfoDiv.style.display = 'none';
+        }
+    } else if (isProcessingVideo) {
+         thresholdInfo.textContent = 'Cálculo de métricas disponível apenas para imagens.';
+         metricasInfoDiv.style.display = 'none';
     }
 });
