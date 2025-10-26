@@ -1,5 +1,5 @@
 import cv2
-import numpy as np  # <-- ADICIONE ESTA IMPORTAÇÃO
+import numpy as np  
 
 def converter_para_cinza(img):
     gray_image = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -27,18 +27,14 @@ def aplicar_otsu(img):
     return otsu_image, threshold_value
 
 
-def suavizar_pela_media(img, kernel_size=5):
-    if kernel_size % 2 == 0:
-        kernel_size += 1
+def suavizar_pela_media(img, kernel_size):
     
     blurred_image = cv2.blur(img, (kernel_size, kernel_size))
     
     return blurred_image
 
 
-def suavizar_pela_mediana(img, kernel_size=5):
-    if kernel_size % 2 == 0:
-        kernel_size += 1
+def suavizar_pela_mediana(img, kernel_size):
     
     median_image = cv2.medianBlur(img, kernel_size)
     
@@ -46,53 +42,68 @@ def suavizar_pela_mediana(img, kernel_size=5):
 
 
 def detectar_bordas_canny(img, t_lower=100, t_upper=200):
-    # Canny funciona melhor em escala de cinza
     if len(img.shape) == 3:
         gray_image = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     else:
         gray_image = img
         
-    # Aplica um leve blur para reduzir o ruído antes do Canny
     blurred_image = cv2.GaussianBlur(gray_image, (5, 5), 0)
     
     canny_edges = cv2.Canny(blurred_image, t_lower, t_upper)
     
     return canny_edges
 
-# --- NOVAS FUNÇÕES ADICIONADAS ---
 
-def aplicar_erosao(img, kernel_size=5):
-    if kernel_size % 2 == 0:
-        kernel_size += 1
-    # Cria o elemento estruturante (kernel)
+def aplicar_erosao(img, kernel_size):
     kernel = np.ones((kernel_size, kernel_size), np.uint8)
-    # Aplica a erosão
     erode_image = cv2.erode(img, kernel, iterations=1)
     return erode_image
 
 def aplicar_dilatacao(img, kernel_size=5):
-    if kernel_size % 2 == 0:
-        kernel_size += 1
-    # Cria o elemento estruturante (kernel)
     kernel = np.ones((kernel_size, kernel_size), np.uint8)
-    # Aplica a dilatação
     dilate_image = cv2.dilate(img, kernel, iterations=1)
     return dilate_image
 
 def aplicar_abertura(img, kernel_size=5):
-    if kernel_size % 2 == 0:
-        kernel_size += 1
-    # Cria o elemento estruturante (kernel)
     kernel = np.ones((kernel_size, kernel_size), np.uint8)
-    # Aplica a abertura (erosão seguida de dilatação)
     open_image = cv2.morphologyEx(img, cv2.MORPH_OPEN, kernel)
     return open_image
 
 def aplicar_fechamento(img, kernel_size=5):
-    if kernel_size % 2 == 0:
-        kernel_size += 1
-    # Cria o elemento estruturante (kernel)
     kernel = np.ones((kernel_size, kernel_size), np.uint8)
-    # Aplica o fechamento (dilatação seguida de erosão)
     close_image = cv2.morphologyEx(img, cv2.MORPH_CLOSE, kernel)
     return close_image
+
+
+def gerar_histograma(img):
+    hist_height = 256
+    hist_width = 512
+    bin_width = int(round(hist_width / 256))
+    
+    hist_image = np.zeros((hist_height, hist_width, 3), dtype=np.uint8)
+    
+    if len(img.shape) == 3: 
+        colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255)] # B, G, R
+        for i, color in enumerate(colors):
+            hist = cv2.calcHist([img], [i], None, [256], [0, 256])
+            cv2.normalize(hist, hist, 0, hist_height, cv2.NORM_MINMAX)
+            
+            for j in range(256):
+                cv2.line(hist_image, 
+                        (bin_width * j, hist_height), 
+                        (bin_width * j, hist_height - int(hist[j])), 
+                        color, 
+                        thickness=bin_width)
+    
+    else: 
+        hist = cv2.calcHist([img], [0], None, [256], [0, 256])
+        cv2.normalize(hist, hist, 0, hist_height, cv2.NORM_MINMAX)
+        
+        for i in range(256):
+            cv2.line(hist_image, 
+                    (bin_width * i, hist_height), 
+                    (bin_width * i, hist_height - int(hist[i])), 
+                    (255, 255, 255), 
+                    thickness=bin_width)
+            
+    return hist_image
