@@ -114,17 +114,3 @@ select {
 input[type="file"] {
     display: none;
 }
-
-@media (max-width: 768px) {
-    body {
-        flex-direction: column;
-    }
-    .sidebar {
-        width: 100%;
-        border-right: none;
-        border-bottom: 1px solid #e0e0e0;
-    }
-    .images {
-        grid-template-columns: 1fr;
-    }
-}

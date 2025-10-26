@@ -6,6 +6,12 @@ const btnNegative = document.getElementById('btnNegative');
 const btnOtsu = document.getElementById('btnOtsu');
 const btnMedia = document.getElementById('btnMedia');
 const btnMediana = document.getElementById('btnMediana');
+const btnCanny = document.getElementById('btnCanny'); 
+// --- NOVAS CONSTANTES ---
+const btnErode = document.getElementById('btnErode');
+const btnDilate = document.getElementById('btnDilate');
+const btnOpen = document.getElementById('btnOpen');
+const btnClose = document.getElementById('btnClose');
 const kernelSize = document.getElementById('kernelSize');
 
 const inputVideo = document.getElementById('inputVideo');
@@ -39,6 +45,12 @@ function enableFilterButtons() {
     btnOtsu.disabled = false;
     btnMedia.disabled = false;
     btnMediana.disabled = false;
+    btnCanny.disabled = false;
+    // --- HABILITAR NOVOS BOTÕES ---
+    btnErode.disabled = false;
+    btnDilate.disabled = false;
+    btnOpen.disabled = false;
+    btnClose.disabled = false;
 }
 
 function stopVideoProcessing() {
@@ -46,8 +58,6 @@ function stopVideoProcessing() {
         cancelAnimationFrame(animationFrameId);
         animationFrameId = null;
     }
-    // NÃO definimos isProcessingVideo = false aqui.
-    // Essa variável só deve mudar ao carregar uma IMAGEM.
     currentFilter = null;
 }
 // --- Acessar a Câmera ---
@@ -132,31 +142,20 @@ async function processVideoFrame(filterEndpoint, filterName) {
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-        // Processa com Canvas para filtros simples (mais rápido)
-        if (filterName === 'grayscale') {
-            applyGrayscaleCanvas(canvas);
-            if (currentFilter === filterName) {
-                animationFrameId = requestAnimationFrame(() => processVideoFrame(filterEndpoint, filterName));
-            }
-            return;
-        } else if (filterName === 'negative') {
-            applyNegativeCanvas(canvas);
-            if (currentFilter === filterName) {
-                animationFrameId = requestAnimationFrame(() => processVideoFrame(filterEndpoint, filterName));
-            }
-            return;
-        }
-
-        // Para filtros complexos (Otsu, Média, Mediana), envia ao servidor
+        
         canvas.toBlob(async (blob) => {
             if (!blob || currentFilter !== filterName) return;
 
             const formData = new FormData();
             formData.append('image', blob, 'frame.jpg');
-            if (filterName === 'media' || filterName === 'mediana') {
+            
+            // --- MODIFICAÇÃO AQUI ---
+            // Lista de filtros que precisam do 'kernel_size'
+            const kernelFilters = ['media', 'mediana', 'erode', 'dilate', 'open', 'close'];
+            if (kernelFilters.includes(filterName)) {
                 formData.append('kernel_size', kernelSize.value);
             }
+            // --- FIM DA MODIFICAÇÃO ---
 
             try {
                 const response = await fetch(filterEndpoint, {
@@ -167,7 +166,8 @@ async function processVideoFrame(filterEndpoint, filterName) {
                 if (!response.ok || currentFilter !== filterName) return;
 
                 const data = await response.json();
-                const imageKey = Object.keys(data).find(key => key.includes('image'));
+                
+                const imageKey = Object.keys(data).find(key => key.includes('image') || key.includes('img'));
                 
                 if (data[imageKey] && currentFilter === filterName) {
                     const processedCtx = processedCanvas.getContext('2d');
@@ -186,12 +186,11 @@ async function processVideoFrame(filterEndpoint, filterName) {
             }
 
             if (currentFilter === filterName) {
-                // Reduz FPS para 10fps no processamento de servidor
                 setTimeout(() => {
                     animationFrameId = requestAnimationFrame(() => processVideoFrame(filterEndpoint, filterName));
-                }, 100);
+                }, 100); 
             }
-        }, 'image/jpeg', 0.6);
+        }, 'image/jpeg', 0.6); 
     } else {
         if (currentFilter === filterName) {
             animationFrameId = requestAnimationFrame(() => processVideoFrame(filterEndpoint, filterName));
@@ -199,42 +198,6 @@ async function processVideoFrame(filterEndpoint, filterName) {
     }
 }
 
-// Filtro de escala de cinza usando Canvas (processamento local - rápido)
-function applyGrayscaleCanvas(sourceCanvas) {
-    const ctx = sourceCanvas.getContext('2d');
-    const imageData = ctx.getImageData(0, 0, sourceCanvas.width, sourceCanvas.height);
-    const data = imageData.data;
-
-    for (let i = 0; i < data.length; i += 4) {
-        const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
-        data[i] = gray;
-        data[i + 1] = gray;
-        data[i + 2] = gray;
-    }
-
-    const processedCtx = processedCanvas.getContext('2d');
-    processedCanvas.width = sourceCanvas.width;
-    processedCanvas.height = sourceCanvas.height;
-    processedCtx.putImageData(imageData, 0, 0);
-}
-
-// Filtro negativo usando Canvas (processamento local - rápido)
-function applyNegativeCanvas(sourceCanvas) {
-    const ctx = sourceCanvas.getContext('2d');
-    const imageData = ctx.getImageData(0, 0, sourceCanvas.width, sourceCanvas.height);
-    const data = imageData.data;
-
-    for (let i = 0; i < data.length; i += 4) {
-        data[i] = 255 - data[i];
-        data[i + 1] = 255 - data[i + 1];
-        data[i + 2] = 255 - data[i + 2];
-    }
-
-    const processedCtx = processedCanvas.getContext('2d');
-    processedCanvas.width = sourceCanvas.width;
-    processedCanvas.height = sourceCanvas.height;
-    processedCtx.putImageData(imageData, 0, 0);
-}
 
 // --- Filtros ---
 btnGrayscale.addEventListener('click', async () => {
@@ -242,7 +205,7 @@ btnGrayscale.addEventListener('click', async () => {
         stopVideoProcessing();
         currentFilter = 'grayscale';
         processedCanvas.style.display = 'block';
-        thresholdInfo.textContent = 'Processando vídeo (tempo real)...';
+        thresholdInfo.textContent = 'Processando vídeo (via Python)...';
         processVideoFrame('/convert_to_grayscale', 'grayscale');
     } else if (currentImageFile) {
         const formData = new FormData();
@@ -253,13 +216,7 @@ btnGrayscale.addEventListener('click', async () => {
                 method: 'POST',
                 body: formData,
             });
-
-            if (!response.ok) {
-                throw new Error(`Erro do servidor: ${response.statusText}`);
-            }
-
             const data = await response.json();
-
             if (data.grayscale_image) {
                 processedImage.src = 'data:image/jpeg;base64,' + data.grayscale_image;
                 processedImage.style.display = 'block';
@@ -267,7 +224,6 @@ btnGrayscale.addEventListener('click', async () => {
             }
         } catch (error) {
             console.error("Erro ao converter para cinza:", error);
-            alert("Ocorreu um erro ao converter a imagem.");
         }
     }
 });
@@ -277,7 +233,7 @@ btnNegative.addEventListener('click', async () => {
         stopVideoProcessing();
         currentFilter = 'negative';
         processedCanvas.style.display = 'block';
-        thresholdInfo.textContent = 'Processando vídeo (tempo real)...';
+        thresholdInfo.textContent = 'Processando vídeo (via Python)...';
         processVideoFrame('/convert_to_negative', 'negative');
     } else if (currentImageFile) {
         const formData = new FormData();
@@ -288,13 +244,7 @@ btnNegative.addEventListener('click', async () => {
                 method: 'POST',
                 body: formData,
             });
-
-            if (!response.ok) {
-                throw new Error(`Erro do servidor: ${response.statusText}`);
-            }
-
             const data = await response.json();
-
             if (data.negative_img) {
                 processedImage.src = 'data:image/jpeg;base64,' + data.negative_img;
                 processedImage.style.display = 'block';
@@ -302,7 +252,6 @@ btnNegative.addEventListener('click', async () => {
             }
         } catch (error) {
             console.error("Erro ao inverter:", error);
-            alert("Ocorreu um erro ao converter a imagem.");
         }
     }
 });
@@ -312,7 +261,7 @@ btnOtsu.addEventListener('click', async () => {
         stopVideoProcessing();
         currentFilter = 'otsu';
         processedCanvas.style.display = 'block';
-        thresholdInfo.textContent = 'Processando vídeo (pode estar lento)...';
+        thresholdInfo.textContent = 'Processando vídeo (via Python)...';
         processVideoFrame('/convert_to_otsu', 'otsu');
     } else if (currentImageFile) {
         const formData = new FormData();
@@ -323,24 +272,16 @@ btnOtsu.addEventListener('click', async () => {
                 method: 'POST',
                 body: formData,
             });
-
-            if (!response.ok) {
-                throw new Error(`Erro do servidor: ${response.statusText}`);
-            }
-
             const data = await response.json();
-
             if (data.otsu_image) {
                 processedImage.src = 'data:image/jpeg;base64,' + data.otsu_image;
                 processedImage.style.display = 'block';
-                
                 if (data.threshold_value) {
                     thresholdInfo.textContent = `Limiar: ${data.threshold_value.toFixed(2)}`;
                 }
             }
         } catch (error) {
             console.error("Erro ao aplicar Otsu:", error);
-            alert("Ocorreu um erro ao processar a imagem.");
         }
     }
 });
@@ -350,7 +291,7 @@ btnMedia.addEventListener('click', async () => {
         stopVideoProcessing();
         currentFilter = 'media';
         processedCanvas.style.display = 'block';
-        thresholdInfo.textContent = `Processando vídeo (pode estar lento, Kernel: ${kernelSize.value}x${kernelSize.value})...`;
+        thresholdInfo.textContent = `Processando vídeo (via Python, Kernel: ${kernelSize.value}x${kernelSize.value})...`;
         processVideoFrame('/suavizar_media', 'media');
     } else if (currentImageFile) {
         const formData = new FormData();
@@ -362,13 +303,7 @@ btnMedia.addEventListener('click', async () => {
                 method: 'POST',
                 body: formData,
             });
-
-            if (!response.ok) {
-                throw new Error(`Erro do servidor: ${response.statusText}`);
-            }
-
             const data = await response.json();
-
             if (data.blurred_image) {
                 processedImage.src = 'data:image/jpeg;base64,' + data.blurred_image;
                 processedImage.style.display = 'block';
@@ -376,7 +311,6 @@ btnMedia.addEventListener('click', async () => {
             }
         } catch (error) {
             console.error("Erro ao suavizar:", error);
-            alert("Ocorreu um erro ao processar a imagem.");
         }
     }
 });
@@ -386,7 +320,7 @@ btnMediana.addEventListener('click', async () => {
         stopVideoProcessing();
         currentFilter = 'mediana';
         processedCanvas.style.display = 'block';
-        thresholdInfo.textContent = `Processando vídeo (pode estar lento, Kernel: ${kernelSize.value}x${kernelSize.value})...`;
+        thresholdInfo.textContent = `Processando vídeo (via Python, Kernel: ${kernelSize.value}x${kernelSize.value})...`;
         processVideoFrame('/suavizar_mediana', 'mediana');
     } else if (currentImageFile) {
         const formData = new FormData();
@@ -398,13 +332,7 @@ btnMediana.addEventListener('click', async () => {
                 method: 'POST',
                 body: formData,
             });
-
-            if (!response.ok) {
-                throw new Error(`Erro do servidor: ${response.statusText}`);
-            }
-
             const data = await response.json();
-
             if (data.median_image) {
                 processedImage.src = 'data:image/jpeg;base64,' + data.median_image;
                 processedImage.style.display = 'block';
@@ -412,7 +340,156 @@ btnMediana.addEventListener('click', async () => {
             }
         } catch (error) {
             console.error("Erro ao suavizar:", error);
-            alert("Ocorreu um erro ao processar a imagem.");
+        }
+    }
+});
+
+btnCanny.addEventListener('click', async () => {
+    if (isProcessingVideo) {
+        stopVideoProcessing();
+        currentFilter = 'canny';
+        processedCanvas.style.display = 'block';
+        thresholdInfo.textContent = 'Processando vídeo (via Python)...';
+        processVideoFrame('/detect_canny', 'canny');
+    } else if (currentImageFile) {
+        const formData = new FormData();
+        formData.append('image', currentImageFile);
+
+        try {
+            const response = await fetch('/detect_canny', {
+                method: 'POST',
+                body: formData,
+            });
+            const data = await response.json();
+            if (data.canny_image) {
+                processedImage.src = 'data:image/jpeg;base64,' + data.canny_image;
+                processedImage.style.display = 'block';
+                thresholdInfo.textContent = 'Detector de Bordas Canny';
+            }
+        } catch (error) {
+            console.error("Erro ao aplicar Canny:", error);
+        }
+    }
+});
+
+// --- NOVOS EVENT LISTENERS ADICIONADOS ---
+
+btnErode.addEventListener('click', async () => {
+    const kSize = kernelSize.value;
+    if (isProcessingVideo) {
+        stopVideoProcessing();
+        currentFilter = 'erode';
+        processedCanvas.style.display = 'block';
+        thresholdInfo.textContent = `Processando vídeo (Erosão, Kernel: ${kSize}x${kSize})...`;
+        processVideoFrame('/morf_erode', 'erode');
+    } else if (currentImageFile) {
+        const formData = new FormData();
+        formData.append('image', currentImageFile);
+        formData.append('kernel_size', kSize);
+
+        try {
+            const response = await fetch('/morf_erode', {
+                method: 'POST',
+                body: formData,
+            });
+            const data = await response.json();
+            if (data.erode_image) {
+                processedImage.src = 'data:image/jpeg;base64,' + data.erode_image;
+                processedImage.style.display = 'block';
+                thresholdInfo.textContent = `Erosão (Kernel: ${kSize}x${kSize})`;
+            }
+        } catch (error) {
+            console.error("Erro ao aplicar Erosão:", error);
+        }
+    }
+});
+
+btnDilate.addEventListener('click', async () => {
+    const kSize = kernelSize.value;
+    if (isProcessingVideo) {
+        stopVideoProcessing();
+        currentFilter = 'dilate';
+        processedCanvas.style.display = 'block';
+        thresholdInfo.textContent = `Processando vídeo (Dilatação, Kernel: ${kSize}x${kSize})...`;
+        processVideoFrame('/morf_dilate', 'dilate');
+    } else if (currentImageFile) {
+        const formData = new FormData();
+        formData.append('image', currentImageFile);
+        formData.append('kernel_size', kSize);
+
+        try {
+            const response = await fetch('/morf_dilate', {
+                method: 'POST',
+                body: formData,
+            });
+            const data = await response.json();
+            if (data.dilate_image) {
+                processedImage.src = 'data:image/jpeg;base64,' + data.dilate_image;
+                processedImage.style.display = 'block';
+                thresholdInfo.textContent = `Dilatação (Kernel: ${kSize}x${kSize})`;
+            }
+        } catch (error) {
+            console.error("Erro ao aplicar Dilatação:", error);
+        }
+    }
+});
+
+btnOpen.addEventListener('click', async () => {
+    const kSize = kernelSize.value;
+    if (isProcessingVideo) {
+        stopVideoProcessing();
+        currentFilter = 'open';
+        processedCanvas.style.display = 'block';
+        thresholdInfo.textContent = `Processando vídeo (Abertura, Kernel: ${kSize}x${kSize})...`;
+        processVideoFrame('/morf_open', 'open');
+    } else if (currentImageFile) {
+        const formData = new FormData();
+        formData.append('image', currentImageFile);
+        formData.append('kernel_size', kSize);
+
+        try {
+            const response = await fetch('/morf_open', {
+                method: 'POST',
+                body: formData,
+            });
+            const data = await response.json();
+            if (data.open_image) {
+                processedImage.src = 'data:image/jpeg;base64,' + data.open_image;
+                processedImage.style.display = 'block';
+                thresholdInfo.textContent = `Abertura (Kernel: ${kSize}x${kSize})`;
+            }
+        } catch (error) {
+            console.error("Erro ao aplicar Abertura:", error);
+        }
+    }
+});
+
+btnClose.addEventListener('click', async () => {
+    const kSize = kernelSize.value;
+    if (isProcessingVideo) {
+        stopVideoProcessing();
+        currentFilter = 'close';
+        processedCanvas.style.display = 'block';
+        thresholdInfo.textContent = `Processando vídeo (Fechamento, Kernel: ${kSize}x${kSize})...`;
+        processVideoFrame('/morf_close', 'close');
+    } else if (currentImageFile) {
+        const formData = new FormData();
+        formData.append('image', currentImageFile);
+        formData.append('kernel_size', kSize);
+
+        try {
+            const response = await fetch('/morf_close', {
+                method: 'POST',
+                body: formData,
+            });
+            const data = await response.json();
+            if (data.close_image) {
+                processedImage.src = 'data:image/jpeg;base64,' + data.close_image;
+                processedImage.style.display = 'block';
+                thresholdInfo.textContent = `Fechamento (Kernel: ${kSize}x${kSize})`;
+            }
+        } catch (error) {
+            console.error("Erro ao aplicar Fechamento:", error);
         }
     }
 });
