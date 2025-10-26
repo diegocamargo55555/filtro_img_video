@@ -351,13 +351,13 @@ btnCanny.addEventListener('click', async () => {
         currentFilter = 'canny';
         processedCanvas.style.display = 'block';
         
-        processVideoFrame('/detect_canny', 'canny');
+        processVideoFrame('/canny', 'canny');
     } else if (currentImageFile) {
         const formData = new FormData();
         formData.append('image', currentImageFile);
 
         try {
-            const response = await fetch('/detect_canny', {
+            const response = await fetch('/canny', {
                 method: 'POST',
                 body: formData,
             });
@@ -380,14 +380,14 @@ btnErode.addEventListener('click', async () => {
         currentFilter = 'erode';
         processedCanvas.style.display = 'block';
         thresholdInfo.textContent = `Processando vídeo (Erosão, Kernel: ${kSize}x${kSize})...`;
-        processVideoFrame('/morf_erode', 'erode');
+        processVideoFrame('/erosao', 'erode');
     } else if (currentImageFile) {
         const formData = new FormData();
         formData.append('image', currentImageFile);
         formData.append('kernel_size', kSize);
 
         try {
-            const response = await fetch('/morf_erode', {
+            const response = await fetch('/erosao', {
                 method: 'POST',
                 body: formData,
             });
@@ -410,14 +410,14 @@ btnDilate.addEventListener('click', async () => {
         currentFilter = 'dilate';
         processedCanvas.style.display = 'block';
         thresholdInfo.textContent = `Processando vídeo (Dilatação, Kernel: ${kSize}x${kSize})...`;
-        processVideoFrame('/morf_dilate', 'dilate');
+        processVideoFrame('/dilatacao', 'dilate');
     } else if (currentImageFile) {
         const formData = new FormData();
         formData.append('image', currentImageFile);
         formData.append('kernel_size', kSize);
 
         try {
-            const response = await fetch('/morf_dilate', {
+            const response = await fetch('/dilatacao', {
                 method: 'POST',
                 body: formData,
             });
@@ -440,14 +440,14 @@ btnOpen.addEventListener('click', async () => {
         currentFilter = 'open';
         processedCanvas.style.display = 'block';
         thresholdInfo.textContent = `Processando vídeo (Abertura, Kernel: ${kSize}x${kSize})...`;
-        processVideoFrame('/morf_open', 'open');
+        processVideoFrame('/abertura', 'open');
     } else if (currentImageFile) {
         const formData = new FormData();
         formData.append('image', currentImageFile);
         formData.append('kernel_size', kSize);
 
         try {
-            const response = await fetch('/morf_open', {
+            const response = await fetch('/abertura', {
                 method: 'POST',
                 body: formData,
             });
@@ -470,14 +470,14 @@ btnClose.addEventListener('click', async () => {
         currentFilter = 'close';
         processedCanvas.style.display = 'block';
         thresholdInfo.textContent = `Processando vídeo (Fechamento, Kernel: ${kSize}x${kSize})...`;
-        processVideoFrame('/morf_close', 'close');
+        processVideoFrame('/fechamento', 'close');
     } else if (currentImageFile) {
         const formData = new FormData();
         formData.append('image', currentImageFile);
         formData.append('kernel_size', kSize);
 
         try {
-            const response = await fetch('/morf_close', {
+            const response = await fetch('/fechamento', {
                 method: 'POST',
                 body: formData,
             });

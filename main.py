@@ -75,8 +75,8 @@ def suavizar_mediana():
     return {'median_image': aplicar_filtro(request.files, filtros.suavizar_pela_mediana, kernel_size)}
 
 
-@app.route('/detect_canny', methods=['POST'])
-def detect_canny():
+@app.route('/canny', methods=['POST'])
+def canny():
     return {'canny_image': aplicar_filtro(request.files, filtros.detectar_bordas_canny)}
 
 
@@ -84,26 +84,26 @@ def detect_canny():
 def gerar_histograma():
     return {'histogram_image': aplicar_filtro(request.files, filtros.gerar_histograma)}
 
-@app.route('/morf_erode', methods=['POST'])
-def morf_erode():
+@app.route('/erosao', methods=['POST'])
+def erosao():
     kernel_size = int(request.form.get('kernel_size'))
     return {'erode_image': aplicar_filtro(request.files, filtros.aplicar_erosao, kernel_size)}
 
 
-@app.route('/morf_dilate', methods=['POST'])
-def morf_dilate():
+@app.route('/dilatacao', methods=['POST'])
+def dilatacao():
     kernel_size = int(request.form.get('kernel_size'))
     return {'dilate_image': aplicar_filtro(request.files, filtros.aplicar_dilatacao, kernel_size)}
 
 
-@app.route('/morf_open', methods=['POST'])
-def morf_open():
+@app.route('/abertura', methods=['POST'])
+def abertura():
     kernel_size = int(request.form.get('kernel_size'))
     return {'open_image': aplicar_filtro(request.files, filtros.aplicar_abertura, kernel_size)}
 
 
-@app.route('/morf_close', methods=['POST'])
-def morf_close():
+@app.route('/fechamento', methods=['POST'])
+def fechamento():
     kernel_size = int(request.form.get('kernel_size'))
     return {'close_image': aplicar_filtro(request.files, filtros.aplicar_fechamento, kernel_size)}
 
@@ -113,7 +113,6 @@ def detectar_pessoas_route():
 
 @app.route('/detectar_cachorros', methods=['POST'])
 def detectar_cachorros_route():
-    # A chave será 'dog_image'
     return {'dog_image': aplicar_filtro(request.files, filtros.detectar_cachorros)}
 
 if __name__ == '__main__':
