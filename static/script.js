@@ -14,6 +14,7 @@ const btnClose = document.getElementById('btnClose');
 const kernelSize = document.getElementById('kernelSize');
 const btnHistogram = document.getElementById('btnHistogram');
 const btnDetectarPessoa = document.getElementById('btnDetectarPessoa');
+const btnDetectarCachorro = document.getElementById('btnDetectarCachorro');
 
 const inputVideo = document.getElementById('inputVideo');
 const inputImagem = document.getElementById('inputImagem');
@@ -53,6 +54,7 @@ function enableFilterButtons() {
     btnClose.disabled = false;
     btnHistogram.disabled = false;
     btnDetectarPessoa.disabled = false;
+    btnDetectarCachorro.disabled = false;
 }
 
 function stopVideoProcessing() {
@@ -198,13 +200,13 @@ async function processVideoFrame(filterEndpoint, filterName) {
 }
 
 
-// --- Filtros ---
+// --- Botoes de Filtros ---
 btnGrayscale.addEventListener('click', async () => {
     if (isProcessingVideo) {
         stopVideoProcessing();
         currentFilter = 'grayscale';
         processedCanvas.style.display = 'block';
-        thresholdInfo.textContent = 'Processando vídeo (via Python)...';
+        
         processVideoFrame('/convert_to_grayscale', 'grayscale');
     } else if (currentImageFile) {
         const formData = new FormData();
@@ -232,7 +234,7 @@ btnNegative.addEventListener('click', async () => {
         stopVideoProcessing();
         currentFilter = 'negative';
         processedCanvas.style.display = 'block';
-        thresholdInfo.textContent = 'Processando vídeo (via Python)...';
+        
         processVideoFrame('/convert_to_negative', 'negative');
     } else if (currentImageFile) {
         const formData = new FormData();
@@ -260,7 +262,7 @@ btnOtsu.addEventListener('click', async () => {
         stopVideoProcessing();
         currentFilter = 'otsu';
         processedCanvas.style.display = 'block';
-        thresholdInfo.textContent = 'Processando vídeo (via Python)...';
+        
         processVideoFrame('/convert_to_otsu', 'otsu');
     } else if (currentImageFile) {
         const formData = new FormData();
@@ -348,7 +350,7 @@ btnCanny.addEventListener('click', async () => {
         stopVideoProcessing();
         currentFilter = 'canny';
         processedCanvas.style.display = 'block';
-        thresholdInfo.textContent = 'Processando vídeo (via Python)...';
+        
         processVideoFrame('/detect_canny', 'canny');
     } else if (currentImageFile) {
         const formData = new FormData();
@@ -524,7 +526,7 @@ btnDetectarPessoa.addEventListener('click', async () => {
         stopVideoProcessing();
         currentFilter = 'pessoa'; 
         processedCanvas.style.display = 'block';
-        thresholdInfo.textContent = 'Detectando Pessoas (via Python)...';
+        thresholdInfo.textContent = 'Detectando Pessoas ';
         processVideoFrame('/detectar_pessoas', 'pessoa'); 
     } else if (currentImageFile) {
         const formData = new FormData();
@@ -542,7 +544,35 @@ btnDetectarPessoa.addEventListener('click', async () => {
                 thresholdInfo.textContent = 'Detecção de Pessoas';
             }
         } catch (error) {
-            console.error("Erro ao detectar pessoas:", error);
+            console.error("Erro ao detectar pessoas:", error);        }
+    }
+});
+
+btnDetectarCachorro.addEventListener('click', async () => {
+    if (isProcessingVideo) {
+        stopVideoProcessing();
+        currentFilter = 'cachorro'; 
+        processedCanvas.style.display = 'block';
+        thresholdInfo.textContent = 'Detectando Cachorros (YOLOv8)...';
+        processVideoFrame('/detectar_cachorros', 'cachorro'); 
+    } else if (currentImageFile) {
+        const formData = new FormData();
+        formData.append('image', currentImageFile);
+
+        try {
+            const response = await fetch('/detectar_cachorros', {
+                method: 'POST',
+                body: formData,
+            });
+            const data = await response.json();
+            // Use a chave 'dog_image' que definimos no main.py
+            if (data.dog_image) { 
+                processedImage.src = 'data:image/jpeg;base64,' + data.dog_image;
+                processedImage.style.display = 'block';
+                thresholdInfo.textContent = 'Detecção de Cachorros (YOLOv8)';
+            }
+        } catch (error) {
+            console.error("Erro ao detectar cachorros:", error);
         }
     }
 });

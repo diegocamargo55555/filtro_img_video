@@ -1,8 +1,12 @@
 import cv2
 import numpy as np  
+from ultralytics import YOLO
+model = YOLO('yolov8n.pt')
+coco_names = model.names
+
 
 person_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-
+animal_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalcatface.xml')
 
 def converter_para_cinza(img):
     gray_image = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -21,12 +25,9 @@ def aplicar_otsu(img):
         gray_image = img
     
     threshold_value, otsu_image = cv2.threshold(
-        gray_image, 
-        0, 
-        255,  
+        gray_image, 0, 255,  
         cv2.THRESH_BINARY + cv2.THRESH_OTSU
     )
-    
     return otsu_image, threshold_value
 
 
@@ -77,15 +78,55 @@ def aplicar_fechamento(img, kernel_size=5):
     close_image = cv2.morphologyEx(img, cv2.MORPH_CLOSE, kernel)
     return close_image
 
-def detectar_pessoas(img):
-    gray_image = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)    
-    pessoas = person_cascade.detectMultiScale(gray_image, 1.1, 4)
+def detectar_com_yolo(img, classes_desejadas):
+    # Roda a detecção do YOLO
+    results = model(img)
     
-    for (x, y, w, h) in pessoas:
-        cv2.rectangle(img, (x, y), (x+w, y+h), (0, 255, 0), 2) # Retângulo verde
-        
+    # Itera pelos resultados
+    for r in results:
+        boxes = r.boxes
+        for box in boxes:
+            # Pega o ID da classe
+            cls_id = int(box.cls[0])
+            
+            # Verifica se a classe é uma das que queremos detectar
+            if cls_id in classes_desejadas:
+                # Pega as coordenadas da caixa
+                x1, y1, x2, y2 = map(int, box.xyxy[0])
+                # Pega a confiança (score)
+                conf = float(box.conf[0])
+                # Pega o nome da classe
+                cls_name = coco_names[cls_id]
+                
+                # Desenha o retângulo
+                cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                # Escreve o texto (label)
+                label = f'{cls_name} {conf:.2f}'
+                cv2.putText(img, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                
     return img
 
+
+# --- MODIFICAR A FUNÇÃO 'detectar_pessoas' ---
+def detectar_pessoas(img):
+    # Remove o código antigo do Haar Cascade
+    # gray_image = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)    
+    # pessoas = person_cascade.detectMultiScale(gray_image, 1.1, 4)
+    # for (x, y, w, h) in pessoas:
+    #     cv2.rectangle(img, (x, y), (x+w, y+h), (0, 255, 0), 2)
+    # return img
+    
+    # Adiciona a nova lógica YOLO (classe 0 é 'person')
+    return detectar_com_yolo(img, classes_desejadas=[0])
+
+
+# --- ADICIONAR NOVA FUNÇÃO 'detectar_cachorros' ---
+# (Coloque antes ou depois de 'gerar_histograma')
+def detectar_cachorros(img):
+    # Classe 16 é 'dog' no modelo COCO
+    return detectar_com_yolo(img, classes_desejadas=[16])
+
+    
 
 def gerar_histograma(img):
     hist_height = 256

@@ -111,6 +111,10 @@ def morf_close():
 def detectar_pessoas_route():
     return {'person_image': aplicar_filtro(request.files, filtros.detectar_pessoas)}
 
+@app.route('/detectar_cachorros', methods=['POST'])
+def detectar_cachorros_route():
+    # A chave será 'dog_image'
+    return {'dog_image': aplicar_filtro(request.files, filtros.detectar_cachorros)}
 
 if __name__ == '__main__':
     app.run(debug=True)
