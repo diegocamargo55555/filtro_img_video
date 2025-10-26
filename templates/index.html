@@ -18,8 +18,21 @@
             <hr>
 
             <button id="btnGrayscale">Acizentar</button>
-            <button id="btnNegative">negativar</button>
-            <button id="btnOtsu">Otsu</button>
+            <button id="btnNegative">Negativar</button>
+            <button id="btnOtsu">Otsu (Binário)</button>
+            <button id="btnMedia">Suavizar (Média)</button>
+            <button id="btnMediana">Suavizar (Mediana)</button>
+            
+            <div style="margin-top: 10px;">
+                <label for="kernelSize">Tamanho do Kernel: </label>
+                <select id="kernelSize">
+                    <option value="3">3x3</option>
+                    <option value="5" selected>5x5</option>
+                    <option value="7">7x7</option>
+                    <option value="9">9x9</option>
+                    <option value="11">11x11</option>
+                </select>
+            </div>
         </div>
 
         <input type="file" id="inputVideo" accept="video/*" style="display: none;">
@@ -34,6 +47,7 @@
         <div id="processedImageContainer">
             <h2>Imagem Processada</h2>
             <img id="processedImage" src="" alt="Imagem processada (cinza)" />
+            <p id="thresholdInfo" style="margin-top: 10px; font-weight: bold;"></p>
         </div>
     </div>
 
@@ -43,6 +57,9 @@
         const btnImagem = document.getElementById('btnImagem');
         const btnGrayscale = document.getElementById('btnGrayscale');
         const btnNegative = document.getElementById('btnNegative');
+        const btnOtsu = document.getElementById('btnOtsu');
+        const btnMedia = document.getElementById('btnMedia');
+        const btnMediana = document.getElementById('btnMediana');
 
         const inputVideo = document.getElementById('inputVideo');
         const inputImagem = document.getElementById('inputImagem');
@@ -50,6 +67,7 @@
         const videoPlayer = document.getElementById('videoPlayer');
         const originalImage = document.getElementById('originalImage');
         const processedImage = document.getElementById('processedImage');
+        const thresholdInfo = document.getElementById('thresholdInfo');
 
         let currentImageFile = null; 
 
@@ -96,6 +114,8 @@
                 originalImage.style.display = 'block';
                 btnGrayscale.disabled = false;
                 btnNegative.disabled = false;
+                btnOtsu.disabled = false;
+                thresholdInfo.textContent = '';
             }
         });
 
@@ -124,6 +144,7 @@
                 if (data.grayscale_image) {
                     processedImage.src = 'data:image/jpeg;base64,' + data.grayscale_image;
                     processedImage.style.display = 'block';
+                    thresholdInfo.textContent = '';
                 } else {
                     alert("O servidor não retornou a imagem em cinza.");
                 }
@@ -160,6 +181,7 @@
                 if (data.negative_img) {
                     processedImage.src = 'data:image/jpeg;base64,' + data.negative_img;
                     processedImage.style.display = 'block';
+                    thresholdInfo.textContent = '';
                 } else {
                     alert("O servidor não retornou a imagem Invertida.");
                 }
@@ -167,6 +189,45 @@
             } catch (error) {
                 console.error("Erro ao Inverter:", error);
                 alert("Ocorreu um erro ao converter a imagem. Verifique o console para mais detalhes.");
+            }
+        });
+
+        // --- Otsu (Binarização) ---
+        btnOtsu.addEventListener('click', async () => {
+            if (!currentImageFile) {
+                alert("Por favor, carregue uma imagem primeiro.");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('image', currentImageFile);
+
+            try {
+                const response = await fetch('/convert_to_otsu', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Erro do servidor: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+
+                if (data.otsu_image) {
+                    processedImage.src = 'data:image/jpeg;base64,' + data.otsu_image;
+                    processedImage.style.display = 'block';
+                    
+                    if (data.threshold_value) {
+                        thresholdInfo.textContent = `Limiar calculado pelo método de Otsu: ${data.threshold_value.toFixed(2)}`;
+                    }
+                } else {
+                    alert("O servidor não retornou a imagem binarizada.");
+                }
+
+            } catch (error) {
+                console.error("Erro ao aplicar Otsu:", error);
+                alert("Ocorreu um erro ao processar a imagem. Verifique o console para mais detalhes.");
             }
         });
     </script>
