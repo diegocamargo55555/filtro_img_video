@@ -1,6 +1,9 @@
 import cv2
 import numpy as np  
 
+person_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+
+
 def converter_para_cinza(img):
     gray_image = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     return gray_image
@@ -74,15 +77,24 @@ def aplicar_fechamento(img, kernel_size=5):
     close_image = cv2.morphologyEx(img, cv2.MORPH_CLOSE, kernel)
     return close_image
 
+def detectar_pessoas(img):
+    gray_image = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)    
+    pessoas = person_cascade.detectMultiScale(gray_image, 1.1, 4)
+    
+    for (x, y, w, h) in pessoas:
+        cv2.rectangle(img, (x, y), (x+w, y+h), (0, 255, 0), 2) # Retângulo verde
+        
+    return img
+
 
 def gerar_histograma(img):
     hist_height = 256
     hist_width = 512
     bin_width = int(round(hist_width / 256))
     
-    hist_image = np.zeros((hist_height, hist_width, 3), dtype=np.uint8)
-    
     if len(img.shape) == 3: 
+        hist_image = np.zeros((hist_height * 2, hist_width, 3), dtype=np.uint8)
+        
         colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255)] # B, G, R
         for i, color in enumerate(colors):
             hist = cv2.calcHist([img], [i], None, [256], [0, 256])
@@ -94,8 +106,23 @@ def gerar_histograma(img):
                         (bin_width * j, hist_height - int(hist[j])), 
                         color, 
                         thickness=bin_width)
+        
+        gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        hist = cv2.calcHist([gray_img], [0], None, [256], [0, 256])
+        cv2.normalize(hist, hist, 0, hist_height, cv2.NORM_MINMAX)
+        
+        y_base_gray = hist_height * 2
+        
+        for i in range(256):
+            cv2.line(hist_image, 
+                    (bin_width * i, y_base_gray), 
+                    (bin_width * i, y_base_gray - int(hist[i])), 
+                    (255, 255, 255), 
+                    thickness=bin_width)
     
     else: 
+        hist_image = np.zeros((hist_height, hist_width, 3), dtype=np.uint8)
+        
         hist = cv2.calcHist([img], [0], None, [256], [0, 256])
         cv2.normalize(hist, hist, 0, hist_height, cv2.NORM_MINMAX)
         

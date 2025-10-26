@@ -7,12 +7,13 @@ const btnOtsu = document.getElementById('btnOtsu');
 const btnMedia = document.getElementById('btnMedia');
 const btnMediana = document.getElementById('btnMediana');
 const btnCanny = document.getElementById('btnCanny'); 
-// --- NOVAS CONSTANTES ---
 const btnErode = document.getElementById('btnErode');
 const btnDilate = document.getElementById('btnDilate');
 const btnOpen = document.getElementById('btnOpen');
 const btnClose = document.getElementById('btnClose');
 const kernelSize = document.getElementById('kernelSize');
+const btnHistogram = document.getElementById('btnHistogram');
+const btnDetectarPessoa = document.getElementById('btnDetectarPessoa');
 
 const inputVideo = document.getElementById('inputVideo');
 const inputImagem = document.getElementById('inputImagem');
@@ -46,11 +47,12 @@ function enableFilterButtons() {
     btnMedia.disabled = false;
     btnMediana.disabled = false;
     btnCanny.disabled = false;
-    // --- HABILITAR NOVOS BOTÕES ---
     btnErode.disabled = false;
     btnDilate.disabled = false;
     btnOpen.disabled = false;
     btnClose.disabled = false;
+    btnHistogram.disabled = false;
+    btnDetectarPessoa.disabled = false;
 }
 
 function stopVideoProcessing() {
@@ -149,13 +151,10 @@ async function processVideoFrame(filterEndpoint, filterName) {
             const formData = new FormData();
             formData.append('image', blob, 'frame.jpg');
             
-            // --- MODIFICAÇÃO AQUI ---
-            // Lista de filtros que precisam do 'kernel_size'
             const kernelFilters = ['media', 'mediana', 'erode', 'dilate', 'open', 'close'];
             if (kernelFilters.includes(filterName)) {
                 formData.append('kernel_size', kernelSize.value);
             }
-            // --- FIM DA MODIFICAÇÃO ---
 
             try {
                 const response = await fetch(filterEndpoint, {
@@ -372,8 +371,6 @@ btnCanny.addEventListener('click', async () => {
     }
 });
 
-// --- NOVOS EVENT LISTENERS ADICIONADOS ---
-
 btnErode.addEventListener('click', async () => {
     const kSize = kernelSize.value;
     if (isProcessingVideo) {
@@ -490,6 +487,62 @@ btnClose.addEventListener('click', async () => {
             }
         } catch (error) {
             console.error("Erro ao aplicar Fechamento:", error);
+        }
+    }
+});
+
+btnHistogram.addEventListener('click', async () => {
+    if (isProcessingVideo) {
+        stopVideoProcessing();
+        currentFilter = 'histogram';
+        processedCanvas.style.display = 'block';
+        thresholdInfo.textContent = 'Processando vídeo (Histograma)...';
+        processVideoFrame('/gerar_histograma', 'histogram');
+    } else if (currentImageFile) {
+        const formData = new FormData();
+        formData.append('image', currentImageFile);
+
+        try {
+            const response = await fetch('/gerar_histograma', {
+                method: 'POST',
+                body: formData,
+            });
+            const data = await response.json();
+            if (data.histogram_image) {
+                processedImage.src = 'data:image/jpeg;base64,' + data.histogram_image;
+                processedImage.style.display = 'block';
+                thresholdInfo.textContent = 'Histograma';
+            }
+        } catch (error) {
+            console.error("Erro ao gerar histograma:", error);
+        }
+    }
+});
+
+btnDetectarPessoa.addEventListener('click', async () => {
+    if (isProcessingVideo) {
+        stopVideoProcessing();
+        currentFilter = 'pessoa'; 
+        processedCanvas.style.display = 'block';
+        thresholdInfo.textContent = 'Detectando Pessoas (via Python)...';
+        processVideoFrame('/detectar_pessoas', 'pessoa'); 
+    } else if (currentImageFile) {
+        const formData = new FormData();
+        formData.append('image', currentImageFile);
+
+        try {
+            const response = await fetch('/detectar_pessoas', {
+                method: 'POST',
+                body: formData,
+            });
+            const data = await response.json();
+            if (data.person_image) { 
+                processedImage.src = 'data:image/jpeg;base64,' + data.person_image;
+                processedImage.style.display = 'block';
+                thresholdInfo.textContent = 'Detecção de Pessoas';
+            }
+        } catch (error) {
+            console.error("Erro ao detectar pessoas:", error);
         }
     }
 });

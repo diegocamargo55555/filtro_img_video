@@ -1,9 +1,7 @@
-# app.py
 from flask import Flask, render_template, request, Response
 import cv2
 import numpy as np
 import base64
-from io import BytesIO
 import filtros 
 
 app = Flask(__name__)
@@ -108,6 +106,10 @@ def morf_open():
 def morf_close():
     kernel_size = int(request.form.get('kernel_size'))
     return {'close_image': aplicar_filtro(request.files, filtros.aplicar_fechamento, kernel_size)}
+
+@app.route('/detectar_pessoas', methods=['POST'])
+def detectar_pessoas_route():
+    return {'person_image': aplicar_filtro(request.files, filtros.detectar_pessoas)}
 
 
 if __name__ == '__main__':
